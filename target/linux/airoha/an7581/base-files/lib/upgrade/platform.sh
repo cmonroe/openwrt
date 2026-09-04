@@ -36,9 +36,24 @@ platform_do_upgrade() {
 		nokia,xg-040g-md-ubi)
 			fit_do_upgrade "$1"
 			;;
+		smartrg,sdg-8716v)
+			CI_KERNPART="kernel"
+			CI_ROOTPART="rootfs"
+			emmc_do_upgrade "$1"
+			;;
 		*)
 			nand_do_upgrade "$1"
 			;;
+	esac
+}
+
+platform_copy_config() {
+	local board=$(board_name)
+
+	case "$board" in
+	smartrg,sdg-8716v)
+		emmc_copy_config
+		;;
 	esac
 }
 

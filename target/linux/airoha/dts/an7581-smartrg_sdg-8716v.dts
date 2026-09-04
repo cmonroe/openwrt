@@ -1,0 +1,388 @@
+// SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+/dts-v1/;
+
+/* Bootloader installs ATF here */
+/memreserve/ 0x80000000 0x200000;
+
+#include <dt-bindings/leds/common.h>
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/input/input.h>
+#include "an7581.dtsi"
+#include "an7581-npu-mt7992.dtsi"
+
+/ {
+	model = "SmartRG SDG-8716v";
+	compatible = "smartrg,sdg-8716v", "airoha,an7581", "airoha,en7581";
+
+	aliases {
+		serial0 = &uart1;
+		led-boot = &led_sys_green;
+		led-failsafe = &led_sys_blue;
+		led-running = &led_sys_white;
+		led-upgrade = &led_sys_red;
+	};
+
+	chosen {
+		bootargs = "console=ttyS0,115200n1 root=PARTLABEL=rootfs";
+		stdout-path = "serial0:115200n8";
+	};
+
+	memory@80000000 {
+		device_type = "memory";
+		reg = <0x0 0x80000000 0x0 0x40000000>;
+	};
+
+	gpio-keys {
+		compatible = "gpio-keys";
+
+		button-reset {
+			label = "reset";
+			linux,code = <KEY_RESTART>;
+			gpios = <&en7581_pinctrl 0 GPIO_ACTIVE_LOW>;
+		};
+	};
+
+	leds {
+		compatible = "gpio-leds";
+
+		led-0 {
+			color = <LED_COLOR_ID_AMBER>;
+			function = LED_FUNCTION_LAN;
+			function-enumerator = <2>;
+			gpios = <&en7581_pinctrl 33 GPIO_ACTIVE_LOW>;
+		};
+
+		led-1 {
+			color = <LED_COLOR_ID_GREEN>;
+			function = LED_FUNCTION_LAN;
+			function-enumerator = <2>;
+			gpios = <&en7581_pinctrl 43 GPIO_ACTIVE_LOW>;
+		};
+
+		led-2 {
+			color = <LED_COLOR_ID_AMBER>;
+			function = LED_FUNCTION_LAN;
+			function-enumerator = <3>;
+			gpios = <&en7581_pinctrl 34 GPIO_ACTIVE_LOW>;
+		};
+
+		led-3 {
+			color = <LED_COLOR_ID_GREEN>;
+			function = LED_FUNCTION_LAN;
+			function-enumerator = <3>;
+			gpios = <&en7581_pinctrl 44 GPIO_ACTIVE_LOW>;
+		};
+
+		led-4 {
+			color = <LED_COLOR_ID_AMBER>;
+			function = LED_FUNCTION_LAN;
+			function-enumerator = <4>;
+			gpios = <&en7581_pinctrl 35 GPIO_ACTIVE_LOW>;
+		};
+
+		led-5 {
+			color = <LED_COLOR_ID_GREEN>;
+			function = LED_FUNCTION_LAN;
+			function-enumerator = <4>;
+			gpios = <&en7581_pinctrl 45 GPIO_ACTIVE_LOW>;
+		};
+	};
+};
+
+&en7581_pinctrl {
+	gpio-ranges = <&en7581_pinctrl 0 13 50>;
+
+	/* Keep the Si32184 SLIC in reset; its FXS line is not supported. */
+	slic-reset-hog {
+		gpio-hog;
+		gpios = <14 GPIO_ACTIVE_HIGH>;
+		output-low;
+		line-name = "slic_reset";
+	};
+
+	mdio_pins: mdio-pins {
+		mux {
+			function = "mdio";
+			groups = "mdio";
+		};
+
+		conf {
+			pins = "gpio2";
+			output-high;
+		};
+	};
+
+	i2c1_pins: i2c1-pins {
+		mux {
+			function = "i2c";
+			groups = "i2c1";
+		};
+	};
+
+	pcie1_rst_pins: pcie1-rst-pins {
+		conf {
+			pins = "pcie_reset1";
+			drive-open-drain = <1>;
+		};
+	};
+
+	pcie2_rst_pins: pcie2-rst-pins {
+		conf {
+			pins = "pcie_reset2";
+			drive-open-drain = <1>;
+		};
+	};
+
+	mmc_pins: mmc-pins {
+		mux {
+			function = "emmc";
+			groups = "emmc";
+		};
+	};
+};
+
+&usb1 {
+	status = "disabled";
+
+	mediatek,u3p-dis-msk = <0x1>;
+	phys = <&usb1_phy PHY_TYPE_USB2>;
+};
+
+&mmc0 {
+	pinctrl-names = "default", "state_uhs";
+	pinctrl-0 = <&mmc_pins>;
+	pinctrl-1 = <&mmc_pins>;
+	status = "okay";
+
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	card@0 {
+		compatible = "mmc-card";
+		reg = <0>;
+
+		partitions {
+			compatible = "gpt-partitions";
+
+			block-partition-factory {
+				partname = "factory";
+
+				nvmem-layout {
+					compatible = "fixed-layout";
+					#address-cells = <1>;
+					#size-cells = <1>;
+
+					eeprom_factory_0: eeprom@0 {
+						reg = <0x0 0x1e00>;
+					};
+				};
+			};
+
+			block-partition-mfginfo {
+				partname = "mfginfo";
+
+				nvmem-layout {
+					compatible = "adtran,mfginfo";
+
+					macaddr: mfg-mac {
+						#nvmem-cell-cells = <1>;
+					};
+				};
+			};
+		};
+	};
+};
+
+&i2c1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c1_pins>;
+	status = "okay";
+
+	system-leds@30 {
+		compatible = "srg,sysled";
+		reg = <0x30>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		led_sys_red: led@1 {
+			label = "red";
+			reg = <1>;
+		};
+
+		led_sys_green: led@2 {
+			label = "green";
+			reg = <2>;
+		};
+
+		led_sys_blue: led@3 {
+			label = "blue";
+			reg = <3>;
+		};
+
+		led_sys_white: led@4 {
+			label = "white";
+			reg = <4>;
+		};
+	};
+};
+
+&pciephy {
+	status = "okay";
+};
+
+&pcie1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pcie1_rst_pins>;
+	status = "okay";
+
+	pcie@0,0 {
+		reg = <0x0000 0 0 0 0>;
+		#address-cells = <3>;
+		#size-cells = <2>;
+
+		wifi@0,0 {
+			compatible = "mediatek,mt76";
+			reg = <0x0000 0 0 0 0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			nvmem-cells = <&eeprom_factory_0>;
+			nvmem-cell-names = "eeprom";
+
+			airoha,npu = <&npu>;
+			airoha,eth = <&eth>;
+
+			ieee80211-freq-limit = <2400000 2500000>, <5170000 5835000>;
+
+			band@0 {
+				/* 2.4 GHz */
+				reg = <0>;
+				nvmem-cells = <&macaddr 0x4>;
+				nvmem-cell-names = "mac-address";
+			};
+
+			band@1 {
+				/* 5 GHz */
+				reg = <1>;
+				nvmem-cells = <&macaddr 0xa>;
+				nvmem-cell-names = "mac-address";
+			};
+		};
+	};
+};
+
+/*
+ * pcie2 carries the second host interface of the same MT7992. mt76 pairs
+ * it with the primary at the PCI level (device id 0x799a), so no wifi child
+ * node belongs here. The USB3 lane of usb1_phy is routed to this controller.
+ */
+&pcie2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pcie2_rst_pins>;
+	status = "okay";
+};
+
+&mdio {
+	phy1: ethernet-phy@1 {
+		/* Realtek RTL8261C/D - LAN1 */
+		compatible = "ethernet-phy-ieee802.3-c45";
+		reg = <0x1>;
+		#thermal-sensor-cells = <0>;
+
+		reset-gpios = <&en7581_pinctrl 31 GPIO_ACTIVE_LOW>;
+		reset-assert-us = <40000>;
+		reset-deassert-us = <150000>;
+
+		leds {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			led@0 {
+				reg = <0>;
+				color = <LED_COLOR_ID_WHITE>;
+				function = LED_FUNCTION_LAN;
+				function-enumerator = <1>;
+			};
+
+			led@1 {
+				reg = <1>;
+				color = <LED_COLOR_ID_ORANGE>;
+				function = LED_FUNCTION_LAN;
+				function-enumerator = <1>;
+			};
+
+			led@3 {
+				reg = <3>;
+				color = <LED_COLOR_ID_GREEN>;
+				function = LED_FUNCTION_LAN;
+				function-enumerator = <1>;
+			};
+		};
+	};
+};
+
+&npu {
+	status = "okay";
+};
+
+&eth {
+	status = "okay";
+};
+
+&gdm1 {
+	openwrt,netdev-name = "dsa0";
+
+	nvmem-cells = <&macaddr 0x0>;
+	nvmem-cell-names = "mac-address";
+
+	status = "okay";
+};
+
+&gdm4 {
+	openwrt,netdev-name = "lan1";
+	phy-handle = <&phy1>;
+	phy-mode = "usxgmii";
+	managed = "in-band-status";
+
+	nvmem-cells = <&macaddr 0x1>;
+	nvmem-cell-names = "mac-address";
+
+	status = "okay";
+};
+
+&eth_pcs {
+	status = "okay";
+};
+
+&switch {
+	pinctrl-names = "default";
+	pinctrl-0 = <&mdio_pins>;
+	status = "okay";
+};
+
+&gsw_port1 {
+	label = "lan2";
+	status = "okay";
+};
+
+&gsw_phy1 {
+	status = "okay";
+};
+
+&gsw_port2 {
+	label = "lan3";
+	status = "okay";
+};
+
+&gsw_phy2 {
+	status = "okay";
+};
+
+&gsw_port3 {
+	label = "lan4";
+	status = "okay";
+};
+
+&gsw_phy3 {
+	status = "okay";
+};

@@ -188,3 +188,19 @@ define Device/nokia_xg-040g-md-ubi
   ARTIFACTS := bl31-uboot.fip preloader.bin
 endef
 TARGET_DEVICES += nokia_xg-040g-md-ubi
+
+define Device/adtran_smartrg
+  DEVICE_VENDOR := Adtran
+  DEVICE_PACKAGES := e2fsprogs f2fsck mkf2fs
+  KERNEL_SIZE := 32768k
+  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
+endef
+
+define Device/smartrg_sdg-8716v
+  $(call Device/adtran_smartrg)
+  DEVICE_MODEL := SDG-8716v
+  DEVICE_DTS := an7581-smartrg_sdg-8716v
+  DEVICE_PACKAGES += airoha-en7581-npu-firmware kmod-mt7992-firmware \
+		    wpad-basic-mbedtls kmod-phy-realtek
+endef
+TARGET_DEVICES += smartrg_sdg-8716v
